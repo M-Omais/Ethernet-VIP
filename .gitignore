@@ -1,0 +1,13 @@
+*
+# Ignore everything
+*
+
+# But not these files/folders
+!.gitignore
+!README.md
+!src/
+!arp_function.py
+!arp_function.cpp
+!arp_function.sv
+!run.bat
+!run.do
