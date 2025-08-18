@@ -1,5 +1,5 @@
 cls
-del arp_function.exe
+del w*.*
 cl arp_function.cpp /Fe:my_dpi.dll /LD /W0 ^
  /I "C:\Users\wasee\AppData\Local\Programs\Python\Python313\include" ^
  /I "%MTI_HOME%\include" ^

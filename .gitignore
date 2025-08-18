@@ -9,5 +9,6 @@
 !arp_function.py
 !arp_function.cpp
 !arp_function.sv
+!arp_test.sv
 !run.bat
 !run.do

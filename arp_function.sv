@@ -65,6 +65,23 @@ class ARP;
 		for (int i = 0; i < 4; i++) tpa[i] = my_data[24+i];
 		
 	endfunction
+	function void pack(output bit [7:0] my_data[28]);
+		// Fixed fields
+		my_data[0] = htype[15:8];
+		my_data[1] = htype[7:0];
+		my_data[2] = ptype[15:8];
+		my_data[3] = ptype[7:0];
+		my_data[4] = hlen;
+		my_data[5] = plen;
+		my_data[6] = oper[15:8];
+		my_data[7] = oper[7:0];
+
+		// MAC and IP addresses
+		for (int i = 0; i < 6; i++) my_data[8+i]  = sha[i];
+		for (int i = 0; i < 4; i++) my_data[14+i] = spa[i];
+		for (int i = 0; i < 6; i++) my_data[18+i] = tha[i];
+		for (int i = 0; i < 4; i++) my_data[24+i] = tpa[i];
+	endfunction
 endclass
 
 class ETH;
@@ -191,6 +208,7 @@ module automatic test;
 		input string dst_ip
 	);
 
+
 	import "DPI-C" context function int eth_frame(
 		output byte data[],
 		inout int len,
@@ -215,7 +233,7 @@ module automatic test;
 		input int payload_len
 	);
 
-byte eth_data[];
+	byte eth_data[];
     byte arp_data[];
     byte ip_data[];
     byte udp_data[];
