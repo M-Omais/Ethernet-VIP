@@ -142,6 +142,55 @@ class IP;
 		for (int i = 0; i < 4; i++) src_ip[i] = data[12+i];
 		for (int i = 0; i < 4; i++) dst_ip[i] = data[16+i];
 	endfunction
+	function void pack(output logic [63:0] my_packet[3]);
+		// my_packet[0] = {
+		// 	version,          // 4
+		// 	ihl,              // 4
+		// 	dscp_ecn,         // 8
+		// 	total_length,     // 16
+		// 	identification,   // 16
+		// 	flags,            // 3
+		// 	frag_offset       // 13
+		// }; // = 64 bits
+		my_packet[0] = {
+			frag_offset[7:0],      // 13
+			flags,            // 3
+			frag_offset[12:8],      // 13
+			identification,   // 16
+			total_length[7:0],     // 16
+			total_length[15:8],     // 16
+			dscp_ecn,         // 8
+			version,	      // 4
+			ihl	              // 4
+		}; // = 64 bits
+		    // Word 1 (next 64 bits)
+		// my_packet[1] = {
+		// 	ttl,              // 8
+		// 	protocol,         // 8
+		// 	hdr_checksum,     // 16
+		// 	src_ip[0],        // 8
+		// 	src_ip[1],        // 8
+		// 	src_ip[2],        // 8
+		// 	src_ip[3]         // 8
+		// }; // = 64 bits
+		my_packet[1] = {
+			src_ip[3],         // 8
+			src_ip[2],        // 8
+			src_ip[1],        // 8
+			src_ip[0],        // 8
+			hdr_checksum[7:0],     // 16
+			hdr_checksum[15:8],     // 16
+			protocol,         // 8
+			ttl              // 8
+		}; // = 64 bits
+		my_packet[2] = {
+			32'd0,             // padding to 64 bits
+			dst_ip[3],        // 8
+			dst_ip[2],        // 8
+			dst_ip[1],        // 8
+			dst_ip[0]        // 8
+		};
+	endfunction
 
 	function void print();
 		$display("-------- IPv4 Packet --------");
@@ -196,109 +245,109 @@ class UDP;
 endclass
 
 
-module automatic test;
+// module automatic test;
 
-    // Import the C++ DPI function
-	import "DPI-C" context function int arp_frame(
-		output byte data[],
-		inout int len,
-		input string src_mac,
-		input string src_ip,
-		input string dst_mac,
-		input string dst_ip
-	);
+//     // Import the C++ DPI function
+// 	import "DPI-C" context function int arp_frame(
+// 		output byte data[],
+// 		inout int len,
+// 		input string src_mac,
+// 		input string src_ip,
+// 		input string dst_mac,
+// 		input string dst_ip
+// 	);
 
 
-	import "DPI-C" context function int eth_frame(
-		output byte data[],
-		inout int len,
-		input string src_mac,
-		input string dst_mac,
-		input int eth_type
-	);
+// 	import "DPI-C" context function int eth_frame(
+// 		output byte data[],
+// 		inout int len,
+// 		input string src_mac,
+// 		input string dst_mac,
+// 		input int eth_type
+// 	);
 
-	import "DPI-C" context function int ip_header(
-		output byte data[],
-		inout int len,
-		input string src_ip,
-		input string dst_ip,
-		input int proto
-	);
+// 	import "DPI-C" context function int ip_header(
+// 		output byte data[],
+// 		inout int len,
+// 		input string src_ip,
+// 		input string dst_ip,
+// 		input int proto
+// 	);
 
-	import "DPI-C" context function int udp_header(
-		output byte data[],
-		inout int len,
-		input int sport,
-		input int dport,
-		input int payload_len
-	);
+// 	import "DPI-C" context function int udp_header(
+// 		output byte data[],
+// 		inout int len,
+// 		input int sport,
+// 		input int dport,
+// 		input int payload_len
+// 	);
 
-	byte eth_data[];
-    byte arp_data[];
-    byte ip_data[];
-    byte udp_data[];
+// 	byte eth_data[];
+//     byte arp_data[];
+//     byte ip_data[];
+//     byte udp_data[];
 
-    int eth_len = 0;
-    int arp_len = 0;
-    int ip_len  = 0;
-    int udp_len = 0;
-    int result;
+//     int eth_len = 0;
+//     int arp_len = 0;
+//     int ip_len  = 0;
+//     int udp_len = 0;
+//     int result;
 
-    // Ethernet
-    string eth_src_mac = "05:00:00:00:00:01";
-    string eth_dst_mac = "ff:ff:ff:ff:ff:ff";
-    int eth_type_arp   = 16'h0806;
-    int eth_type_ip    = 16'h0800;
+//     // Ethernet
+//     string eth_src_mac = "05:00:00:00:00:01";
+//     string eth_dst_mac = "ff:ff:ff:ff:ff:ff";
+//     int eth_type_arp   = 16'h0806;
+//     int eth_type_ip    = 16'h0800;
 
-    // IP
-    string src_ip  = "192.168.1.100";
-    string dst_ip  = "192.168.1.1";
-    int proto_udp  = 17;
+//     // IP
+//     string src_ip  = "192.168.1.100";
+//     string dst_ip  = "192.168.1.1";
+//     int proto_udp  = 17;
 
-    // UDP
-    int sport       = 1234;
-    int dport       = 5678;
-    int payload_len = 16;
+//     // UDP
+//     int sport       = 1234;
+//     int dport       = 5678;
+//     int payload_len = 16;
 
-    // Object declarations
-    ETH eth_obj;
-    ARP arp_obj;
-    IP  ip_obj;
-    UDP udp_obj;
+//     // Object declarations
+//     ETH eth_obj;
+//     ARP arp_obj;
+//     IP  ip_obj;
+//     UDP udp_obj;
 
-    initial begin
-        // Ethernet + ARP
-        eth_data = new[14];
-        arp_data = new[28];
-        eth_len  = 1;
-        arp_len  = 1;
+//     initial begin
+//         // Ethernet + ARP
+//         eth_data = new[14];
+//         arp_data = new[28];
+//         eth_len  = 1;
+//         arp_len  = 1;
 
-        result = eth_frame(eth_data, eth_len, eth_src_mac, eth_dst_mac, eth_type_arp);
-        result = arp_frame(arp_data, arp_len, eth_src_mac, src_ip, eth_dst_mac, dst_ip);
+//         result = eth_frame(eth_data, eth_len, eth_src_mac, eth_dst_mac, eth_type_arp);
+//         result = arp_frame(arp_data, arp_len, eth_src_mac, src_ip, eth_dst_mac, dst_ip);
 
-        if (result != -1) begin
-            eth_obj = new(); arp_obj = new();
-            eth_obj.parse(eth_data); eth_obj.print();
-            arp_obj.parse(arp_data); arp_obj.print();
-        end
+//         if (result != -1) begin
+//             eth_obj = new(); arp_obj = new();
+//             eth_obj.parse(eth_data); eth_obj.print();
+//             arp_obj.parse(arp_data); arp_obj.print();
+//         end
 
-        // Ethernet + IP + UDP
-        eth_data = new[14];
-        ip_data  = new[20];
-        udp_data = new[8];
-        eth_len  = 1;
-        ip_len   = 1;
-        udp_len  = 1;
+//         // Ethernet + IP + UDP
+//         eth_data = new[14];
+//         ip_data  = new[20];
+//         udp_data = new[8];
+//         eth_len  = 1;
+//         ip_len   = 1;
+//         udp_len  = 1;
 
-        result = eth_frame(eth_data, eth_len, eth_src_mac, eth_dst_mac, eth_type_ip);
-        result = ip_header(ip_data, ip_len, src_ip, dst_ip, proto_udp);
-        result = udp_header(udp_data, udp_len, sport, dport, payload_len);
+//         result = eth_frame(eth_data, eth_len, eth_src_mac, eth_dst_mac, eth_type_ip);
+//         result = ip_header(ip_data, ip_len, src_ip, dst_ip, proto_udp);
+//         result = udp_header(udp_data, udp_len, sport, dport, payload_len);
 
-        if (result != -1) begin
-            eth_obj = new(); ip_obj = new(); udp_obj = new();
-            eth_obj.parse(eth_data); eth_obj.print();
-            ip_obj.parse(ip_data); ip_obj.print();
-            udp_obj.parse(udp_data); udp_obj.print();
-        end
-    end
-endmodule
+//         if (result != -1) begin
+//             eth_obj = new(); ip_obj = new(); udp_obj = new();
+//             eth_obj.parse(eth_data); eth_obj.print();
+//             ip_obj.parse(ip_data); ip_obj.print();
+//             udp_obj.parse(udp_data); udp_obj.print();
+//         end
+//     end
+// endmodule

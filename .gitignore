@@ -10,5 +10,6 @@
 !arp_function.cpp
 !arp_function.sv
 !arp_test.sv
+!udp_test.sv
 !run.bat
 !run.do
