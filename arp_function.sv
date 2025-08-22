@@ -50,37 +50,61 @@ class ARP;
 
 		$display("------------------------");
 	endfunction
-	function void parse(byte my_data[28]);
-		    // Parse fixed fields
-		htype	= 	{my_data[0], my_data[1]};
-		ptype	= 	{my_data[2], my_data[3]};
-		hlen	= 	my_data[4];
-		plen	= 	my_data[5];
-		oper	= 	{my_data[6], my_data[7]};
+	function void parse(logic [63:0] data[4]);
+		byte my_data[28];
 
-		// MAC addresses
+		// Unpack 64-bit words into bytes (network order)
+		for (int w = 0; w < 4; w++) begin
+			for (int i = 0; i < 8; i++) begin
+				int idx = w*8 + i;
+				if (idx < 28) begin
+					my_data[idx] = data[w] >> (8*i); // LSB first
+				end
+			end
+		end
+
+		// ---- Parse ARP header ----
+		htype = {my_data[0], my_data[1]};
+		ptype = {my_data[2], my_data[3]};
+		hlen  = my_data[4];
+		plen  = my_data[5];
+		oper  = {my_data[6], my_data[7]};
+
+		// MAC + IP addresses
 		for (int i = 0; i < 6; i++) sha[i] = my_data[8+i];
 		for (int i = 0; i < 4; i++) spa[i] = my_data[14+i];
 		for (int i = 0; i < 6; i++) tha[i] = my_data[18+i];
 		for (int i = 0; i < 4; i++) tpa[i] = my_data[24+i];
-		
 	endfunction
-	function void pack(output bit [7:0] my_data[28]);
-		// Fixed fields
-		my_data[0] = htype[15:8];
-		my_data[1] = htype[7:0];
-		my_data[2] = ptype[15:8];
-		my_data[3] = ptype[7:0];
-		my_data[4] = hlen;
-		my_data[5] = plen;
-		my_data[6] = oper[15:8];
-		my_data[7] = oper[7:0];
+	function void pack(output logic [63:0] data[4]);
+		byte my_data[28];
 
-		// MAC and IP addresses
+		// ---- Serialize ARP header ----
+		my_data[0]  = htype[15:8];
+		my_data[1]  = htype[7:0];
+		my_data[2]  = ptype[15:8];
+		my_data[3]  = ptype[7:0];
+		my_data[4]  = hlen;
+		my_data[5]  = plen;
+		my_data[6]  = oper[15:8];
+		my_data[7]  = oper[7:0];
+
+		// MAC + IP addresses
 		for (int i = 0; i < 6; i++) my_data[8+i]  = sha[i];
 		for (int i = 0; i < 4; i++) my_data[14+i] = spa[i];
 		for (int i = 0; i < 6; i++) my_data[18+i] = tha[i];
 		for (int i = 0; i < 4; i++) my_data[24+i] = tpa[i];
+
+		// ---- Pack into 64-bit words ----
+		for (int w = 0; w < 4; w++) begin
+			data[w] = 64'd0;
+			for (int i = 0; i < 8; i++) begin
+				int idx = w*8 + i;
+				if (idx < 28) begin
+					data[w] |= (64'(my_data[idx]) << (8*i)); // same LSB-first order
+				end
+			end
+		end
 	endfunction
 endclass
 
@@ -128,19 +152,30 @@ class IP;
 	function new();
 	endfunction
 
-	function void parse(byte data[20]);
-		version     = data[0][7:4];
-		ihl         = data[0][3:0];
-		dscp_ecn    = data[1];
-		total_length = {data[2], data[3]};
-		identification = {data[4], data[5]};
-		flags       = data[6][7:5];
-		frag_offset = {data[6][4:0], data[7]};
-		ttl         = data[8];
-		protocol    = data[9];
-		hdr_checksum = {data[10], data[11]};
-		for (int i = 0; i < 4; i++) src_ip[i] = data[12+i];
-		for (int i = 0; i < 4; i++) dst_ip[i] = data[16+i];
+	function void parse(logic [63:0] data[3]);
+		byte b[20]; // 20-byte IPv4 header
+
+		// Unpack 64-bit words into byte array
+		for (int w = 0; w < 3; w++) begin
+			for (int i = 0; i < 8; i++) begin
+				if (8*w+i < 20) // avoid going past 20 bytes
+					b[8*w+i] = data[w] >> (8*(7-i));
+			end
+		end
+
+		// Now parse header like before
+		version       = b[0][7:4];
+		ihl           = b[0][3:0];
+		dscp_ecn      = b[1];
+		total_length  = {b[2], b[3]};
+		identification= {b[4], b[5]};
+		flags         = b[6][7:5];
+		frag_offset   = {b[6][4:0], b[7]};
+		ttl           = b[8];
+		protocol      = b[9];
+		hdr_checksum  = {b[10], b[11]};
+		for (int i = 0; i < 4; i++) src_ip[i] = b[12+i];
+		for (int i = 0; i < 4; i++) dst_ip[i] = b[16+i];
 	endfunction
 	function void pack(output logic [63:0] my_packet[3]);
 		// my_packet[0] = {

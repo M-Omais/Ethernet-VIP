@@ -278,6 +278,7 @@ module udp_test ();
 
 	initial begin
 		clk = 1'b0;
+		clear_arp_cache = 1'b0;
 		// for (int i = 0; i < 32; i++) begin
 		// 	payload[i] = i;   // same as Python range(32)
 		// end
