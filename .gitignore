@@ -11,6 +11,6 @@
 !arp_function.sv
 !arp_test.sv
 !udp_test.sv
-!udp_test_rx.sv
+!udp_test_tx.sv
 !run.bat
 !run.do
